@@ -36,6 +36,8 @@ int IsShaken()
       counter++;
     else if(abs(z-prevZ) > dz*10 && dz != 0)
       counter++;
+      
+    delay(10);
     
     dx = abs(x-prevX);
     dy = abs(y-prevY);
