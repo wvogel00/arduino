@@ -28,6 +28,17 @@ initialize a b = divide 4 $ replicate i 0 ++ [2] ++ replicate (j-i-1) 0 ++ [2] +
 	divide n [] = []
 	divide n xs = take n xs : divide n (drop n xs)
 
+data Direction = Up | Down | Right | Left
+
+getCommad = do
+	comm <- getChar >> getChar >> getChar
+	return case comm of
+		'A' -> Up
+		'B' -> Down
+		'C' -> Right
+		'D' -> Left
+		 _  -> getCommand
+
 main = do
 	time <- toUTCTime <$> getClockTime
 	let initField = initialize (ctSec time) (ctMin time)
@@ -38,17 +49,38 @@ main = do
 game :: Field -> State -> IO State
 game fd (OnPlay score) = do
 	putStrLn $ showField fd
-	command <- getChar
+	command <- getCommnad
 	let (field,state') = next command fd score
 	game field state'
 game _ result = return result
 
-next :: Char -> Field -> Int -> (Field,State)
+next :: Direction -> Field -> Int -> (Field,State)
 next key fd score = if any (==2048) $ concat fd
 	then (fd,Clear score)
 	else if cannotMove fd
 		then (fd,GameOver score)
-		else undefined
+		else move key fd
+
+move :: Direction -> Field -> (Field,Int)
+move Up = map moveVert [0,1,2,3]
+move Down = map moveVert [3,2,1,0]
+move Left = map moveHorizon
+move Right = map moveHorizon
+
+moveVert direction xs = case direction of
+	Up -> map moveVert' 
+
+moveHorizon direction xs = case direction of
+	Left  -> moveHorizon' xs
+	Right -> reverse $ moveHorizon' (reverse xs)
+
+moveHorizon' xs = fd' ++ replicate (4-length fd') 0 where
+	fd' = joint ([],0)$ filter (/=0) xs
+	joint (result,pt) [] = (result,pt)
+	joint (result,pt) [x] = (result++[x],pt)
+	joint (result,pt) (x:y:ys) = if x == y
+		then joint (result**[2*x],pt+2*x) ys
+		else joint (result:[x],pt) (y:ys)
 
 cannotMove :: Field -> Bool
 cannotMove fd = not $ foldl (check fd) False [0..15]
