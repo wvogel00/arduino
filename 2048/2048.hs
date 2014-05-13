@@ -1,4 +1,3 @@
-import System.Random
 import System.Time
 import Control.Applicative
 
@@ -16,7 +15,7 @@ instance Show State where
 	show state =header ++ "\n" ++ "SCORE : " ++ show (getScore state) where
 		header = case state of
 			(Clear _) -> replicate 30 '*' ++ "CLEAR" ++ replicate 30 '*' 
-			(GameOver _) -> replicate 20 '*' ++ "GAME OVER..." ++ replicate 20 '*' 
+			(GameOver _) -> replicate 20 '*' ++ "GAME OVER..." ++ replicate 20 '*'
 			(OnPlay _) -> []
 
 getScore (Clear score) = score
@@ -35,31 +34,33 @@ main = do
 	let initField = initialize (ctSec time) (ctMin time)
 	result <- game initField (OnPlay 0)
 	putStrLn $ show result
-	writeFile (show $ getScore result) "score.txt"
+	writeFile "score.txt" $ show (getScore result)
 
 game :: Field -> State -> IO State
 game field (OnPlay score) = do
 	putStrLn $ show field
 	command <- getChar
-	return $ uncurry game $ next command field state
+	let (field',state') = next command field score
+	game field' state'
 game filed result = return result
 
+next :: Char -> Field -> Int -> (Field,State)
+next key (Field fd) score = if any (==2048) $ concat fd
+	then (Field fd,Clear score)
+	else if cannotMove fd
+		then (Field fd,GameOver score)
+		else undefined
+
 cannotMove :: [[Int]] -> Bool
-connotMove fd = foldl (check fd) True [0..15]
+cannotMove fd = not $ foldl (check fd) False [0..15]
 
 --i:縦, j:横
 check :: [[Int]] -> Bool -> Int -> Bool
-check fd result a = any (filp at fd == at (i,j) fd || flip at fd == 0) where
+check fd result a = result || any check' poses  where
 	(i,j) = toIndex a
 	poses = filter inField [(i-1,j),(i+1,j),(i,j-1),(i,j+1)]
+	check' p = fd `at` p == fd `at` (i,j) || fd `at` p == 0
 
 toIndex a = (div a 4, mod a 4)
-at (i,j) fd = (fd !! i) !! j
+fd `at` (i,j) = (fd !! i) !! j
 inField (i,j) = 0 <= i && i < 4 && 0 <= j && j < 4
-
-next :: Key -> Field -> State -> (Field,State)
-next key (Field fd) st = if any (==2048) $ concat fd
-	then Clear (getScore st)
-	else if cannotMove fd
-		then GameOver (getScore st)
-		else undefined
